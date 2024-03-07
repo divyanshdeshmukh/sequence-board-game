@@ -14,15 +14,19 @@ function shuffleDeck(cards) {
   }
 
 export default function Boards(){
-    const [hoveredCard, setHoveredCard] = useState([]);
-    const [shuffledDeck, setShuffledDeck] = useState([]);
+    const [cards, setCards] = useState([]); // The state for all cards on the board
+    const [hoveredCard, setHoveredCard] = useState([]); // State for hovered card identifiers
+    const [shuffledDeck, setShuffledDeck] = useState([]); // The state for the shuffled deck of cards
     const [playerHand, setPlayerHand] = useState([]);
+    const [selectedJack, setSelectedJack] = useState(null);
 
     useEffect(() => {
-        const allCards = shuffleDeck(importedAllCards.filter(card => ![1, 10, 91, 100].includes(card.id)));
-        setShuffledDeck(allCards);
-        setPlayerHand(allCards.slice(0, 5));
-        setShuffledDeck(prev => prev.slice(5)); // Update the shuffled deck to exclude the drawn cards
+        const initialDeck = shuffleDeck(importedAllCards.filter(card => ![1, 10, 91, 100].includes(card.id)));
+        const playerInitialHand = initialDeck.slice(0, 5);
+        const remainingDeck = initialDeck.slice(5);// Update the shuffled deck to exclude the drawn cards 
+        setPlayerHand(playerInitialHand);
+        setShuffledDeck(remainingDeck);
+        setCards(remainingDeck); 
       }, []);
     
       const drawCardForPlayer = () => {
@@ -38,12 +42,13 @@ export default function Boards(){
         <>
          <div className="game-board">
            <span className="sequence-text sequence-text-left">SEQUENCE</span>
-           <Cards hoveredCard={hoveredCard} setHoveredCard={setHoveredCard} />
+           <Cards playerHand={playerHand} shuffledDeck={shuffledDeck} setPlayerHand={setPlayerHand} setShuffledDeck={setShuffledDeck} hoveredCard={hoveredCard} setHoveredCard={setHoveredCard} selectedJack={selectedJack} setSelectedJack={setSelectedJack}
+           handleClick={(cardId) =>handleClick(cardId, playerHand, setPlayerHand, shuffledDeck, setShuffledDeck, setCards, selectedJack, setSelectedJack )}/>
            <span className="sequence-text sequence-text-right">SEQUENCE</span>
          </div>
          <div className="flex flex-col justify-end items-end relative mr-4 mb-4">
-         <ShuffledDeck drawCardForPlayer={drawCardForPlayer} deckCount={shuffledDeck.length} />
-         <PlayerDeck playerHand={playerHand} hoveredCard={hoveredCard} setHoveredCard={setHoveredCard} />
+         <ShuffledDeck deckCount={shuffledDeck.length} />
+         <PlayerDeck playerHand={playerHand} hoveredCard={hoveredCard} setHoveredCard={setHoveredCard} selectedJack={selectedJack} setSelectedJack={setSelectedJack} />
            
 
          </div>

@@ -1,9 +1,9 @@
 import React from 'react';
 
-export default function ShuffledDeck({ drawCardForPlayer, deckCount }) {
+export default function ShuffledDeck({ deckCount }) {
     return (
         <>
-      <div className="absolute bottom-[100%] right-[30%] mb-[15rem] z-50" onClick={drawCardForPlayer}>
+      <div className="absolute bottom-[100%] right-[30%] mb-[15rem] z-50">
         <div className="flex -space-x-8">
           {[...Array(4)].map((_, index) => (
             <img
