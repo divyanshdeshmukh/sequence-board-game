@@ -1,6 +1,7 @@
 import { useState } from "react"
+import Pattern from "./Pattern";
 
-export default function Cards({playerHand,shuffledDeck,setPlayerHand,setShuffledDeck,hoveredCard, setHoveredCard,selectedJack, setSelectedJack   }){
+export default function Cards({playerHand,shuffledDeck,setPlayerHand,setShuffledDeck,hoveredCard, setHoveredCard,selectedJack, setSelectedJack,updateScore,checkGoalReached}){
 
     const [cards,setCards]=useState([
         { id: 1, img:"../assests/1B.svg",selected: false, matches: []  },
@@ -104,109 +105,63 @@ export default function Cards({playerHand,shuffledDeck,setPlayerHand,setShuffled
         { id: 99, img:"../assests/6D.svg",selected: false, matches: [27,99] },
         { id: 100, img:"../assests/1B.svg",selected: false, matches: [] },  
     ])
-      
-    function handleClick(cardId, playerHand, setPlayerHand, shuffledDeck, setShuffledDeck, setCards,selectedJack, setSelectedJack  ) {
-        console.log(selectedJack)
+    
+    function handleClick(cardId, playerHand, setPlayerHand, shuffledDeck, setShuffledDeck, setCards, selectedJack, setSelectedJack) {
         const cornerCards = [1, 10, 91, 100]; // IDs of corner cards
-        if (selectedJack === 'TwoEyed') {
-            if (!cornerCards.includes(cardId)) {
-                setCards(currentCards => currentCards.map(card => 
-                    card.id === cardId ? { ...card, selected: true } : card
-                ));
-          
-            // Find and remove the first "TwoEyed" jack from the player's hand
-            const indexOfTwoEyedJack = playerHand.findIndex(card => card.id >= 101 && card.id <= 104);
-            if (indexOfTwoEyedJack !== -1) {
-              const newPlayerHand = [...playerHand];
-              newPlayerHand.splice(indexOfTwoEyedJack, 1); // Remove the "TwoEyed" jack from the player's hand
-              
-              // Optionally, add a new card from the shuffled deck to the player's hand
-              if (shuffledDeck.length > 0) {
-                const newCard = shuffledDeck[0];
-                newPlayerHand.push(newCard); // Add the new card to the player's hand
-                setShuffledDeck(currentDeck => currentDeck.slice(1)); // Remove the new card from the shuffled deck
-              }
-          
-              setPlayerHand(newPlayerHand); // Update the player's hand
-            }
-          
-            setSelectedJack(null); // Reset the selectedJack state
-        }
-            else{
-                alert('Invalid move! You cannot place a token on corner cards with a TwoEyed Jack.');
-            }
-        }
-        else if (selectedJack === 'OneEyed') {
+        const isCornerCard = cornerCards.includes(cardId);
+        const cardInHandIndex = playerHand.findIndex(card => card.id === cardId || (card.matches && card.matches.includes(cardId)));
+        const cardAlreadySelected = cards.some(card => card.id === cardId && card.selected);
 
-           // Only allow removing a token if the card already has one (selected)
-            if (cards.some(card => card.id === cardId && card.selected && !cornerCards.includes(cardId))) {
-                // Set the card's selected state to false to remove the token
-                setCards(currentCards => currentCards.map(card =>
-                    card.id === cardId ? { ...card, selected: false } : card
-                ));
-
-            // Find and remove the first "OneEyed" jack from the player's hand
-            const indexOfOneEyedJack = playerHand.findIndex(card => card.id >= 105 && card.id <= 108);
-            if (indexOfOneEyedJack !== -1) {
-            const newPlayerHand = [...playerHand];
-            newPlayerHand.splice(indexOfOneEyedJack, 1); // Remove the "OneEyed" jack from the player's hand
-            
-            // Optionally, add a new card from the shuffled deck to the player's hand
-            if (shuffledDeck.length > 0) {
-                const newCard = shuffledDeck[0];
-                newPlayerHand.push(newCard); // Add the new card to the player's hand
-                setShuffledDeck(currentDeck => currentDeck.slice(1)); // Remove the new card from the shuffled deck
+        const updateHandAndDeck = (indexToRemove) => {
+            if (indexToRemove !== -1) {
+                const newPlayerHand = [...playerHand];
+                newPlayerHand.splice(indexToRemove, 1);
+                if (shuffledDeck.length > 0) {
+                    newPlayerHand.push(shuffledDeck[0]);
+                    setShuffledDeck(deck => deck.slice(1));
+                }
+                setPlayerHand(newPlayerHand);
             }
-
-            setPlayerHand(newPlayerHand); // Update the player's hand
+        };
+    
+        if (selectedJack === 'TwoEyed' && !isCornerCard && !cardAlreadySelected) {
+            setCards(cards => cards.map(card => ({ ...card, selected: card.id === cardId ? true : card.selected })));
+            updateHandAndDeck(playerHand.findIndex(card => card.id >= 101 && card.id <= 104));
+            setSelectedJack(null);
+        } else if (selectedJack === 'OneEyed' &&cardAlreadySelected) {
+            if (!isCornerCard) {
+                setCards(cards => cards.map(card => ({ ...card, selected: card.id === cardId ? false : card.selected })));
+                updateHandAndDeck(playerHand.findIndex(card => card.id >= 105 && card.id <= 108));
+                setSelectedJack(null);
+            } else {
+                alert('Invalid move! You cannot remove a token from this place.');
             }
-
-            setSelectedJack(null); // Reset the selectedJack state
-        }
-        else {
-            alert('Invalid move! You cannot remove a token from corner cards or unselected cards with a OneEyed Jack.');
+        } else if (cardInHandIndex !== -1 && !isCornerCard) {
+            const cardAlreadySelected = cards.some(card => card.id === cardId && card.selected);
+            if (!cardAlreadySelected) {
+                setCards(cards => cards.map(card => ({ ...card, selected: card.id === cardId ? true : card.selected })));
+                updateHandAndDeck(cardInHandIndex);
+            } else {
+                alert('Invalid move! This card has already been placed.');
+            }
+        } else {
+            alert('Invalid move! This action is not allowed.');
         }
     }
-        else{
-        const isInPlayerHand = playerHand.some(card => card.id === cardId || card.matches.includes(cardId));
-        const isCardSelected = cards.some(card => card.id === cardId && card.selected);
-      
-        if (isInPlayerHand && !isCardSelected) {
-          // Mark the card as selected on the board
-          setCards(currentCards => currentCards.map(card =>
-            card.id === cardId ? { ...card, selected: true } : card
-          ));
-          
-          // Find the card in the player's hand that matches the clicked card
-          const cardToRemove = playerHand.find(card => card.id === cardId || card.matches.includes(cardId));
-          
-          // Remove the card from the player's hand and add a new one from the shuffled deck
-          setPlayerHand(currentHand => {
-            const newHand = currentHand.filter(card => card.id !== cardToRemove.id);
-            const newCard = shuffledDeck[0];
-            return shuffledDeck.length > 0 ? [...newHand, newCard] : newHand;
-            });
-                  
-            setShuffledDeck(currentDeck => currentDeck.slice(1));
-          
-          
-        } else if (!isInPlayerHand) {
-          alert('Invalid move! You do not have this card in your hand.');
-        } else if (isCardSelected) {
-          alert('Invalid move! This card has already been placed.');
-        }
-      }
-    }
+    
       
     return (
+        <>
         <div className="inner-container">
              {cards.map((card) => (
                <div key={card.id} className={`card ${hoveredCard.includes(card.id) ? 'highlighted' : ''}`} 
                onClick={() => handleClick(card.id, playerHand, setPlayerHand, shuffledDeck, setShuffledDeck,setCards,selectedJack, setSelectedJack)}>
                    {card.img && <img src={card.img} alt={`Card ${card.id}`} />} 
-                   {card.selected && <div className="poker-chip2"></div>}
+                   {card.selected && <div className="poker-chip1"></div>}
                 </div>
             ))}
         </div>
+        <Pattern cards={cards} updateScore={updateScore} checkGoalReached={checkGoalReached}/>
+        </>
     )
     }

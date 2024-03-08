@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import Cards from './Cards'
 import PlayerDeck from './PlayerDeck'
-import ShuffledDeck from './ShuffledDeck'
+import Deck from './Deck'
 import { allCards as importedAllCards    } from '../data';
+//import { allCards as importedAllCards } from '../unittest'; //only for testing pattern logic
+import ScoreComponent from './Score';
 
 function shuffleDeck(cards) {
     let shuffledCards = [...cards];
@@ -19,6 +21,25 @@ export default function Boards(){
     const [shuffledDeck, setShuffledDeck] = useState([]); // The state for the shuffled deck of cards
     const [playerHand, setPlayerHand] = useState([]);
     const [selectedJack, setSelectedJack] = useState(null);
+    const [redScore, setRedScore] = useState(0);
+    const [blueScore, setBlueScore] = useState(0);
+    const goal = 2;
+
+    const updateScore = (color) => {
+      if (color === 'red') {
+        setRedScore(prev => prev + 1);
+      } else if (color === 'blue') {
+        setBlueScore(prev => prev + 1);
+      }
+    };
+    const checkGoalReached = () => {
+      if (redScore >= goal-1) {
+        console.log(redScore);
+        alert('Red wins the game!');
+      } else if (blueScore >= goal-1) {
+        alert('Blue wins the game!');
+      }
+    };
 
     useEffect(() => {
         const initialDeck = shuffleDeck(importedAllCards.filter(card => ![1, 10, 91, 100].includes(card.id)));
@@ -42,15 +63,15 @@ export default function Boards(){
         <>
          <div className="game-board">
            <span className="sequence-text sequence-text-left">SEQUENCE</span>
-           <Cards playerHand={playerHand} shuffledDeck={shuffledDeck} setPlayerHand={setPlayerHand} setShuffledDeck={setShuffledDeck} hoveredCard={hoveredCard} setHoveredCard={setHoveredCard} selectedJack={selectedJack} setSelectedJack={setSelectedJack}
+           <Cards playerHand={playerHand} shuffledDeck={shuffledDeck} setPlayerHand={setPlayerHand} setShuffledDeck={setShuffledDeck} hoveredCard={hoveredCard} setHoveredCard={setHoveredCard} 
+           selectedJack={selectedJack} setSelectedJack={setSelectedJack} updateScore={updateScore} checkGoalReached={checkGoalReached}
            handleClick={(cardId) =>handleClick(cardId, playerHand, setPlayerHand, shuffledDeck, setShuffledDeck, setCards, selectedJack, setSelectedJack )}/>
            <span className="sequence-text sequence-text-right">SEQUENCE</span>
          </div>
          <div className="flex flex-col justify-end items-end relative mr-4 mb-4">
-         <ShuffledDeck deckCount={shuffledDeck.length} />
+         <Deck deckCount={shuffledDeck.length} />
          <PlayerDeck playerHand={playerHand} hoveredCard={hoveredCard} setHoveredCard={setHoveredCard} selectedJack={selectedJack} setSelectedJack={setSelectedJack} />
-           
-
+         <ScoreComponent redScore={redScore} blueScore={blueScore} goal={goal} />
          </div>
     </>
   );

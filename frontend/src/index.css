@@ -15,6 +15,23 @@
   @apply grid grid-cols-10 grid-rows-10 gap-3.5;
 }
 
+.shuffled-deck-container {
+  @apply absolute bottom-0 right-0 mb-4 mr-4 sm:bottom-[100%] sm:right-[31%] sm:mb-[17rem] transform scale-110 transition duration-500 ease-in-out hover:scale-125;
+
+  background: #5a3f37; /* Dark brown background */
+  box-shadow: 
+    0 0 .5rem #d2b48c, /* Light brown glow */
+    0 0 1rem #d2b48c, /* Light brown outer glow */
+    inset 0 0 .5rem #d2b48c; /* Inner glow effect */
+  border: 1px solid rgba(255, 255, 255, 0.2); /* Soft white border */
+}
+
+.score-container{
+  @apply absolute bottom-0 right-0 sm:bottom-[100%] sm:right-[32%] sm:mb-[4rem] mb-4 mr-4 p-2 rounded-lg shadow-xl text-white text-sm;
+  background: linear-gradient(145deg, #5a3f37, #2c1e12); /* Updated gradient for a wooden look */
+  box-shadow: 5px 5px 15px #2c1e12, -5px -5px 15px #8b6553; /* Box shadow for 3D effect */
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
 .player-deck-container {
   @apply absolute bottom-0 right-0 mb-4 mr-4 p-4 rounded-md shadow-xl flex flex-col items-center;
   width: 400px; /* Adjust width as needed */

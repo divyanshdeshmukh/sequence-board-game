@@ -1,9 +1,9 @@
 import React from 'react';
 
-export default function ShuffledDeck({ deckCount }) {
+export default function Deck({ deckCount }) {
     return (
         <>
-      <div className="absolute bottom-[100%] right-[30%] mb-[15rem] z-50">
+      <div className="shuffled-deck-container">
         <div className="flex -space-x-8">
           {[...Array(4)].map((_, index) => (
             <img
@@ -15,7 +15,8 @@ export default function ShuffledDeck({ deckCount }) {
             />
           ))}
         </div>
-        <p className="deck-count">Deck Count: {deckCount}</p>
+        <p className="deck-count text-sm bg-white p-2 rounded-full text-gray-700 font-bold shadow-md hover:shadow-xl transition duration-500 ease-in-out">
+          Deck Count: {deckCount}</p>
       </div>
       </>
     );
