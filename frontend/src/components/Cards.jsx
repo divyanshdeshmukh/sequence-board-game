@@ -1,7 +1,7 @@
 import { useState } from "react"
 import Pattern from "./Pattern";
 
-export default function Cards({playerHand,shuffledDeck,setPlayerHand,setShuffledDeck,hoveredCard, setHoveredCard,selectedJack, setSelectedJack,updateScore,checkGoalReached}){
+export default function Cards({socket,playerHand,shuffledDeck,setPlayerHand,setShuffledDeck,hoveredCard, setHoveredCard,selectedJack, setSelectedJack,updateScore,checkGoalReached}){
 
     const [cards,setCards]=useState([
         { id: 1, img:"../assests/1B.svg",selected: false, matches: []  },
@@ -157,7 +157,7 @@ export default function Cards({playerHand,shuffledDeck,setPlayerHand,setShuffled
                <div key={card.id} className={`card ${hoveredCard.includes(card.id) ? 'highlighted' : ''}`} 
                onClick={() => handleClick(card.id, playerHand, setPlayerHand, shuffledDeck, setShuffledDeck,setCards,selectedJack, setSelectedJack)}>
                    {card.img && <img src={card.img} alt={`Card ${card.id}`} />} 
-                   {card.selected && <div className="poker-chip1"></div>}
+                   {card.selected && <div className="poker-chip1 absolute"></div>}
                 </div>
             ))}
         </div>
