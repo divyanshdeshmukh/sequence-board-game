@@ -130,7 +130,7 @@ body {
   @apply right-8 top-1/2 -translate-y-1/2 translate-x-1/2 -rotate-90;
 }
 
-.poker-chip1 {
+.poker-chip-red {
   @apply w-10 h-10 rounded-full flex justify-center items-center;
   @apply border-4 border-white; /* Preserve the white border to look like the edge of a chip */
   @apply text-black text-sm font-bold z-10; /* Maintain text styling and positioning */
@@ -141,7 +141,7 @@ body {
   text-shadow: 1px 1px 2px #000; /* Text shadow for better legibility */
 }
 
-.poker-chip2 {
+.poker-chip-blue {
   @apply w-10 h-10 rounded-full flex justify-center items-center;
   @apply border-4 border-white; /* Preserve the white border to look like the edge of a chip */
   @apply text-black text-sm font-bold z-10; /* Adjusted text color for better contrast with blue */
@@ -158,7 +158,7 @@ body {
   box-shadow: 0 0 8px 2px rgba(255, 255, 0, 0.6); /* Adds a yellow glow around the card */
 }
 
-.selected-jack {
+.selected-card {
   /* Styles to highlight the card */
   border: 2px solid yellow; /* Example: a yellow border to indicate selection */
   transform: scale(1.1); /* Example: slightly enlarge the card */
@@ -194,12 +194,12 @@ body {
   }
 }
 
-.current-move-red{
+.current-move-player2{
   color: rgba(255,0,0,1) !important;
   text-shadow: 1px 1px 2px #000; /* Text shadow for better legibility */
 }
 
-.current-move-blue{
+.current-move-player1{
   color: rgba(0, 116, 217, 1) !important;
   text-shadow: 1px 1px 2px #000; /* Text shadow for better legibility */
 }

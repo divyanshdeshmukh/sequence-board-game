@@ -1,9 +1,4 @@
-// PlayerTurn.js
-
 export default function PlayerTurn({ playerName,opponentName, currentPlayer, playingAs }) {
-    console.log(playerName);
-    console.log(opponentName);
-    console.log(currentPlayer);
     return (
       <div className="player-turn-container">
         <div className="score-container transform scale-150 flex flex-col items-center justify-center">

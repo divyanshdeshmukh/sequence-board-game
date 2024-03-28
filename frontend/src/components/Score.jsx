@@ -1,12 +1,10 @@
-// ScoreComponent.jsx
 import React from 'react';
-
-const ScoreComponent = ({ redScore, blueScore, goal }) => {
+const ScoreComponent = ({ redScore, blueScore}) => {
   return (
     <div className="score-container transform scale-150">
       <div className="mb-1 flex justify-between items-center border-b border-gray-600 pb-1">
         <span className="font-bold">Goal:</span>
-        <span>{goal}</span>
+        <span>{2}</span>
       </div>
       <div className="flex justify-between items-center">
         <div className="mr-2">
