@@ -38,12 +38,15 @@ io.on("connection",(socket) =>{
         shuffledDeck= game.shuffledDeck;
         cards = cards;
         let player = gameController.handleCardSelection(game,cardId, shuffledDeck,cards,currentTurn,selectedCard);
+        if (!player.success && player.message === "Wrong move: Card is protected.") {
+            console.log('Error: ', player.message);
+        }
         game = player.game;
-        
-        let result = gameController.checkForWinner(cards,game);
+        //console.log(game);
+        let result = gameController.checkForWinner(game,cards);
         game=result.game;
-        console.log("Game Score red",game.scores.red);
-        console.log("Game Score blue",game.scores.blue);
+        console.log(game.protectedPatterns);
+        console.log(result.game.scores);
         if (result.winner) {
             game.winner = result.winner;
 
@@ -95,10 +98,10 @@ io.on("connection",(socket) =>{
             let deckCount = game.shuffledDeck.length;
             console.log(deckCount);
         
-            socket.on('clickedcard', (data) =>{
-                 const { cardId } = data;
-                 console.log(`Card clicked: ${cardId}`);
-             })
+            // socket.on('clickedcard', (data) =>{
+            //      const { cardId } = data;
+            //      console.log(`Card clicked: ${cardId}`);
+            //  })
 
             currentUser.socket.emit("OpponentFound",{
                 opponentName : opponentPlayer.playerName,

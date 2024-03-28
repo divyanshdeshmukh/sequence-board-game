@@ -1,19 +1,22 @@
 import { useState } from "react"
-import Pattern from "./Pattern";
 
 export default function Cards({socket,selectCard, cards,hoveredCard,playingAs,currentPlayer}){
 
     function handleClick(cardId,selectCard,socket,card){
         let card_matches = card.matches;
         let validMove = false;
-        if (selectCard > 100 && selectCard < 104 && ![1, 10, 90, 100].includes(cardId)) {
+        if (selectCard > 100 && selectCard <= 104 && ![1, 10, 91, 100].includes(cardId) && !card.selected) {
             validMove = true;
         }
-        if (selectCard > 104 && selectCard < 108 && cardId.selected) {
+        else if (selectCard > 104 && selectCard <= 108 && card.selected) {
             validMove = true;
         }
 
-        if (validMove || card_matches.includes(selectCard) && playingAs === currentPlayer){
+        else if (card_matches.includes(selectCard) && !card.selected) {
+            validMove = true;
+        }
+
+       if (playingAs === currentPlayer && validMove) {
             socket?.emit('Boardcardclicked', { cardId: cardId, selectedCard: selectCard  });
         }
         else{

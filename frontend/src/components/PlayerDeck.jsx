@@ -4,7 +4,7 @@ const PlayerDeck = ({ socket, playerHand, setSelectCard, setHoveredCard, playing
 
   const [selectedCardId, setSelectedCardId] = useState(null);
   const handleCardClick = (card) => {
-      socket?.emit('clickedcard', { cardId: card.id });
+      // socket?.emit('clickedcard', { cardId: card.id });
       setSelectedCardId(prevId => prevId === card.id ? null : card.id);
       setSelectCard(card.id);
   };
