@@ -60,7 +60,7 @@ export default function Boards() {
 
   socket?.on("gameOver", data=>{
     Swal.fire({
-      title: "`{data} Won the game`",
+      title: `${data.winner} Won the game`,
       showClass: {
         popup: `
           animate__animated

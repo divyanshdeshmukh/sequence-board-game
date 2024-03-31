@@ -202,7 +202,7 @@ function Pattern(game, cards) {
 
         for (let i = 0; i < 10; i++) {
 
-            let row = board[i].map((cell, index) => ({ ...cell, index: i * 5 + index + 1 }));
+            let row = board[i].map((cell, index) => ({ ...cell, index: i * 10 + index + 1 }));
             getSequencesOfFive(row).forEach(sequence => {
                 let rowResult = checkConsecutive(sequence, color);
                 if (rowResult.isPattern && isPatternNew(rowResult.patternIndices)) {

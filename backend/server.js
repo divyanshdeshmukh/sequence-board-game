@@ -1,8 +1,9 @@
 const express = require('express');
-const {createServer} = require('http');
+const { createServer } = require('http');
 const { Server } = require('socket.io');
-const  allCards  = require('./data/allCards.js');
-const gameController = require('./controllers/gameController'); 
+const allCards = require('./data/allCards.js');
+//const jackCards = require('./data/jackCards.js'); for testing
+const gameController = require('./controllers/gameController');
 const app = express();
 const httpServer = createServer(app);
 
@@ -12,114 +13,84 @@ let filteredCards = allCards.filter(card => card.id <= 100);
 let cards = JSON.parse(JSON.stringify(filteredCards));
 let game = gameController.initializeGame(allCards);
 
-const io = new Server(httpServer,{
+const io = new Server(httpServer, {
     cors: "http://localhost:5173/",
 });
 
-io.on("connection",(socket) =>{
+io.on("connection", (socket) => {
     allUsers[socket.id] = {
         socket: socket,
         online: true,
-      };
+    };
 
-      socket.on('Boardcardclicked', (data) =>{
-        let cardId = data.cardId;
-        let selectedCard= data.selectedCard;
+    socket.on('Boardcardclicked', (data) => {
+        let { cardId, selectedCard } = data;
         let currentTurn = game.players.player1.isTurn ? 'player1' : 'player2';
-        let currentPlayerSocketId = game.players[currentTurn].socketId;
-        let currentPlayerdeck = game.players[currentTurn].hand;
-        if (!currentPlayerdeck.some(card => card.id === selectedCard)) { //if user tries to manipulate cardid
+        let currentPlayer = game.players[currentTurn];
+        if (socket.id !== currentPlayer.socketId || !currentPlayer.hand.some(card => card.id === selectedCard)) {
+            console.log("Not this player's turn or invalid card manipulation");
             return;
         }
-        if (socket.id !== currentPlayerSocketId) {
-            console.log("Not this player's turn");
+        let playerUpdate = gameController.handleCardSelection(game, cardId, game.shuffledDeck, cards, currentTurn, selectedCard);
+        if (!playerUpdate.success) {
+            console.log('Error: ', playerUpdate.message);
             return;
         }
-        shuffledDeck= game.shuffledDeck;
-        cards = cards;
-        let player = gameController.handleCardSelection(game,cardId, shuffledDeck,cards,currentTurn,selectedCard);
-        if (!player.success && player.message === "Wrong move: Card is protected.") {
-            console.log('Error: ', player.message);
-        }
-        game = player.game;
-        //console.log(game);
-        let result = gameController.checkForWinner(game,cards);
-        game=result.game;
-        console.log(game.protectedPatterns);
-        console.log(result.game.scores);
-        if (result.winner) {
-            game.winner = result.winner;
+        let gameResult = gameController.Pattern(playerUpdate.game, cards);
+        game = gameResult.game;
 
-            io.emit('gameOver', {
-                winner: result.winner
-            });
-
+        if (gameResult.winner) {
+            io.emit('gameOver', { winner: gameResult.winner });
         } else {
-        io.to(player.game.players.player1.socketId).emit('updateGameState', {
-           deckCount: player.shuffledDeck.length,
-           score: game.scores, 
-           cards: player.cards,
-           prevTurn:player.currentPlayer, 
-           currentTurn:  player.game.players.player1.isTurn ? 'player1' : 'player2',
-           playerHand: game.players.player1.hand,
-        });
-
-        io.to(player.game.players.player2.socketId).emit('updateGameState', {
-            deckCount: player.shuffledDeck.length, 
-            score: game.scores, 
-            cards: player.cards,
-            prevTurn:player.currentPlayer, 
-            currentTurn:  player.game.players.player1.isTurn ? 'player1' : 'player2',
-            playerHand: game.players.player2.hand,
-         });
+            Object.entries(game.players).forEach(([key, player]) => {
+                io.to(player.socketId).emit('updateGameState', {
+                    deckCount: playerUpdate.shuffledDeck.length,
+                    score: game.scores,
+                    cards: playerUpdate.cards,
+                    prevTurn: playerUpdate.currentPlayer,
+                    currentTurn: game.players.player1.isTurn ? 'player1' : 'player2',
+                    playerHand: player.hand,
+                });
+            });
         }
     })
 
     socket.on("request_to_play", (data) => {
         const currentUser = allUsers[socket.id];
         currentUser.playerName = data.playerName;
-        
+
         let opponentPlayer;
 
         for (const key in allUsers) {
-        const user = allUsers[key];
-        if (user.online && !user.playing && socket.id !== key) {
-            opponentPlayer = user;
-            break;
+            const user = allUsers[key];
+            if (user.online && !user.playing && socket.id !== key) {
+                opponentPlayer = user;
+                break;
+            }
         }
-        }
-        console.log(opponentPlayer)
-        if (opponentPlayer){
-            console.log('opponent found');
-
+        // console.log(opponentPlayer)
+        if (opponentPlayer) {
             game.players.player1.socketId = socket.id;
             game.players.player2.socketId = opponentPlayer.socket.id;
-            
-            let deckCount = game.shuffledDeck.length;
-            console.log(deckCount);
-        
-            // socket.on('clickedcard', (data) =>{
-            //      const { cardId } = data;
-            //      console.log(`Card clicked: ${cardId}`);
-            //  })
 
-            currentUser.socket.emit("OpponentFound",{
-                opponentName : opponentPlayer.playerName,
+            let deckCount = game.shuffledDeck.length;
+            currentUser.socket.emit("OpponentFound", {
+                opponentName: opponentPlayer.playerName,
                 yourHand: game.players.player1.hand,
                 playingAs: "player1",
-                deckCount:deckCount,
-                cards:cards,
-              })
+                deckCount: deckCount,
+                cards: cards,
+            })
 
-            opponentPlayer.socket.emit("OpponentFound",{
-              opponentName : currentUser.playerName,
-              yourHand: game.players.player2.hand,
-              playingAs: "player2",
-              deckCount:deckCount,
-              cards:cards,
+            opponentPlayer.socket.emit("OpponentFound", {
+                opponentName: currentUser.playerName,
+                yourHand: game.players.player2.hand,
+                playingAs: "player2",
+                deckCount: deckCount,
+                cards: cards,
             })
         }
-        else{
+        else {
             console.log('opponent not found');
             currentUser.socket.emit("OpponentNotFound");
         }

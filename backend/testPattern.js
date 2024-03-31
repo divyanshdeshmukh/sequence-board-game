@@ -1,22 +1,23 @@
 const gameController = require('./controllers/gameController'); 
 
 // //for row
-// let cards = [
-//     { id: 2, selected: "True", selectedby: "blue" },
-//     { id: 3, selected: "True", selectedby: "blue" },
-//     { id: 4, selected: "True", selectedby: "blue" },
-//     { id: 5, selected: "True", selectedby: "blue" },
-// ];
-// let game = gameController.initializeGame(cards);
-// let result = gameController.Pattern(game, cards);
-// let additonal=[
-// { id: 6, selected: "True", selectedby: "blue" },
-// { id: 7, selected: "True", selectedby: "blue" },
-// { id: 8, selected: "True", selectedby: "blue" },
-// { id: 9, selected: "True", selectedby: "blue" },
-// ];
-// cards.push(...additonal);
-// console.log(result.game.protectedPatterns);
+let cards = [
+    { id: 91, selected: "True", selectedby: "blue" },
+    { id: 92, selected: "True", selectedby: "blue" },
+    { id: 93, selected: "True", selectedby: "blue" },
+    { id: 94, selected: "True", selectedby: "blue" },
+];
+let game = gameController.initializeGame(cards);
+let additonal=[
+{ id: 95, selected: "True", selectedby: "blue" },
+{ id: 96, selected: "True", selectedby: "blue" },
+{ id: 97, selected: "True", selectedby: "blue" },
+{ id: 98, selected: "True", selectedby: "blue" },
+];
+cards.push(...additonal);
+let result = gameController.Pattern(game, cards);
+console.log(result.game.protectedPatterns);
+console.log(result.game.scores);
 
 // For column
 // let columnCards = [
@@ -39,17 +40,17 @@ const gameController = require('./controllers/gameController');
 // console.log(resultCol1.game.protectedPatterns);
 
 //Down-right diagonal
-let diagonalDownRightCards = [
-    { id: 3, selected: "True", selectedby: "blue" },
-    { id: 14, selected: "True", selectedby: "blue" },
-    { id: 25, selected: "True", selectedby: "blue" },
-    { id: 36, selected: "True", selectedby: "blue" },
-    { id: 47, selected: "True", selectedby: "blue" },
-    { id: 58, selected: "True", selectedby: "blue" },
-];
-let gameDiagonalDR = gameController.initializeGame(diagonalDownRightCards);
-let resultDiagonalDR = gameController.Pattern(gameDiagonalDR, diagonalDownRightCards);
-console.log(resultDiagonalDR.game.protectedPatterns);
+// let diagonalDownRightCards = [
+//     { id: 3, selected: "True", selectedby: "blue" },
+//     { id: 14, selected: "True", selectedby: "blue" },
+//     { id: 25, selected: "True", selectedby: "blue" },
+//     { id: 36, selected: "True", selectedby: "blue" },
+//     { id: 47, selected: "True", selectedby: "blue" },
+//     { id: 58, selected: "True", selectedby: "blue" },
+// ];
+// let gameDiagonalDR = gameController.initializeGame(diagonalDownRightCards);
+// let resultDiagonalDR = gameController.Pattern(gameDiagonalDR, diagonalDownRightCards);
+// console.log(resultDiagonalDR.game.protectedPatterns);
 // let additionalDiagonalDR = [
 //     { id: 56, selected: "True", selectedby: "blue" },
 //     { id: 67, selected: "True", selectedby: "blue" },
@@ -78,4 +79,5 @@ console.log(resultDiagonalDR.game.protectedPatterns);
 // ];
 // diagonalUpRightCards.push(...additionalDiagonalUR);
 // let resultDiagonalUR2 = gameController.Pattern(gameDiagonalUR, diagonalUpRightCards);
+// console.log(resultDiagonalUR2.game.scores);
 // console.log(resultDiagonalUR2.game.protectedPatterns);
