@@ -53,7 +53,7 @@ function handleCardSelection(
         cardInQuestion.selectedby = currentPlayer == "player1" ? "blue" : "red";
     }
     else if (selectedCard > 104 && selectedCard <= 108 && cardInQuestion.selected === "True") {
-        if (cardInQuestion.selected === "True" && !isCardProtected(cardId, game.protectedPatterns)) {
+        if (!isCardProtected(cardInQuestion, game.protectedPatterns)) {
             cardInQuestion.selected = false;
             cardInQuestion.selectedby = "";
         }

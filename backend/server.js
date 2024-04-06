@@ -6,15 +6,18 @@ const allCards = require('./data/allCards.js');
 const gameController = require('./controllers/gameController');
 const app = express();
 const httpServer = createServer(app);
-
 const allUsers = {};
+const RoomController = require('./controllers/roomController');
 
 let filteredCards = allCards.filter(card => card.id <= 100);
 let cards = JSON.parse(JSON.stringify(filteredCards));
 let game = gameController.initializeGame(allCards);
 
 const io = new Server(httpServer, {
-    cors: "http://localhost:5173/",
+    cors: {
+        origin: '*',
+        methods: ["GET","POST","OPTIONS"]
+    }
 });
 
 io.on("connection", (socket) => {
@@ -91,7 +94,7 @@ io.on("connection", (socket) => {
             })
         }
         else {
-            console.log('opponent not found');
+            //console.log('opponent not found');
             currentUser.socket.emit("OpponentNotFound");
         }
     });
