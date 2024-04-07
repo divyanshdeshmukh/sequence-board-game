@@ -1,109 +1,171 @@
 const express = require('express');
+const mongoose = require("mongoose");
 const { createServer } = require('http');
 const { Server } = require('socket.io');
 const allCards = require('./data/allCards.js');
-//const jackCards = require('./data/jackCards.js'); for testing
 const gameController = require('./controllers/gameController');
+const RoomController = require('./controllers/roomController');
 const app = express();
 const httpServer = createServer(app);
-const allUsers = {};
-const RoomController = require('./controllers/roomController');
-
+const Game = require('./models/Game');
 let filteredCards = allCards.filter(card => card.id <= 100);
 let cards = JSON.parse(JSON.stringify(filteredCards));
-let game = gameController.initializeGame(allCards);
 
+
+require('dotenv').config(); 
 const io = new Server(httpServer, {
     cors: {
         origin: '*',
         methods: ["GET","POST","OPTIONS"]
     }
 });
+const gamesByRoomId = {};
 
-io.on("connection", (socket) => {
-    allUsers[socket.id] = {
-        socket: socket,
-        online: true,
-    };
+// MongoDB connection
+const PORT = process.env.PORT || 7000;
+const MONGO_URL = process.env.MONGO_URL;
 
-    socket.on('Boardcardclicked', (data) => {
-        let { cardId, selectedCard } = data;
-        let currentTurn = game.players.player1.isTurn ? 'player1' : 'player2';
-        let currentPlayer = game.players[currentTurn];
-        if (socket.id !== currentPlayer.socketId || !currentPlayer.hand.some(card => card.id === selectedCard)) {
-            console.log("Not this player's turn or invalid card manipulation");
-            return;
-        }
-        let playerUpdate = gameController.handleCardSelection(game, cardId, game.shuffledDeck, cards, currentTurn, selectedCard);
-        if (!playerUpdate.success) {
-            console.log('Error: ', playerUpdate.message);
-            return;
-        }
-        let gameResult = gameController.Pattern(playerUpdate.game, cards);
-        game = gameResult.game;
+mongoose.connect(MONGO_URL)
+  .then(() => {
+    console.log('MongoDB connected');
+    httpServer.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+      new RoomController(io);
+    });
+  })
+  .catch(err => console.error('MongoDB connection error:', err));
 
-        if (gameResult.winner) {
-            io.emit('gameOver', { winner: gameResult.winner });
-        } else {
-            Object.entries(game.players).forEach(([key, player]) => {
-                io.to(player.socketId).emit('updateGameState', {
-                    deckCount: playerUpdate.shuffledDeck.length,
-                    score: game.scores,
-                    cards: playerUpdate.cards,
-                    prevTurn: playerUpdate.currentPlayer,
-                    currentTurn: game.players.player1.isTurn ? 'player1' : 'player2',
-                    playerHand: player.hand,
-                });
-            });
-        }
-    })
 
-    socket.on("request_to_play", (data) => {
-        const currentUser = allUsers[socket.id];
-        currentUser.playerName = data.playerName;
+function deepClone() {
+    let filteredCards = allCards.filter(card => card.id <= 100);
+    return JSON.parse(JSON.stringify(filteredCards));
+}
 
-        let opponentPlayer;
+// Method to initialize a game in a room
+async function initializeGameForRoom(roomId, playerName, playerId) {
+    // Check if a game already exists for the roomId
+    let existingGame = await Game.findOne({ roomId: roomId });
+  
+    if (!existingGame) {
+      let gameInitialState = gameController.initializeGame(allCards);
+      gameInitialState.players.player1.socketId = playerId;
+      gameInitialState.players.player1.name = playerName;
 
-        for (const key in allUsers) {
-            const user = allUsers[key];
-            if (user.online && !user.playing && socket.id !== key) {
-                opponentPlayer = user;
-                break;
-            }
-        }
-        // console.log(opponentPlayer)
-        if (opponentPlayer) {
-            game.players.player1.socketId = socket.id;
-            game.players.player2.socketId = opponentPlayer.socket.id;
+      let newGame = new Game({
+        roomId: roomId,
+        players: gameInitialState.players,
+        scores: gameInitialState.scores,
+        shuffledDeck: gameInitialState.shuffledDeck,
+        cards: gameInitialState.cards,
+        protectedPatterns: gameInitialState.protectedPatterns
+      });
+  
+      try {
+        await newGame.save();
+        //console.log(`Game initialized in room ${roomId} by ${playerName}`);
+      } catch (err) {
+        console.error('Error saving new game to MongoDB:', err);
+      }
+    } else {
+      //console.log(`Game already exists for room ${roomId}, proceeding with existing game.`);
+    }
+  }
 
-            let deckCount = game.shuffledDeck.length;
-            currentUser.socket.emit("OpponentFound", {
-                opponentName: opponentPlayer.playerName,
+  // Method to start a game in a room
+async function startGameForRoom(roomId, playerName, playerId) {
+    try {
+        let game = await Game.findOne({ roomId: roomId });
+        if (game && !game.players.player2.socketId) {
+            game.players.player2.socketId = playerId;
+            game.players.player2.name = playerName;
+            game.cards = deepClone();
+            // Save the updated game state back to the database
+            await game.save();
+
+            this.io.to(game.players.player1.socketId).emit('OpponentFound', {
+                opponentName: playerName,
                 yourHand: game.players.player1.hand,
                 playingAs: "player1",
-                deckCount: deckCount,
-                cards: cards,
-            })
+                deckCount: game.shuffledDeck.length,
+                cards: game.cards,
+            });
 
-            opponentPlayer.socket.emit("OpponentFound", {
-                opponentName: currentUser.playerName,
+            this.io.to(playerId).emit('OpponentFound', {
+                opponentName: game.players.player1.name,
                 yourHand: game.players.player2.hand,
                 playingAs: "player2",
-                deckCount: deckCount,
-                cards: cards,
-            })
+                deckCount: game.shuffledDeck.length,
+                cards: game.cards,
+            });
+
+            //console.log(`Game in room ${roomId} ready. Players: ${game.players.player1.socketId}, ${playerId}`);
+        } else {
+            console.log(`Game not found for room ${roomId}, or player2 already exists.`);
         }
-        else {
-            //console.log('opponent not found');
-            currentUser.socket.emit("OpponentNotFound");
+    } catch (err) {
+        console.error(`Error updating game for room ${roomId}:`, err);
+    }
+}
+const roomController = new RoomController(io, initializeGameForRoom, startGameForRoom);
+
+io.on("connection", (socket) => {
+    console.log(`New connection: ${socket.id}`);
+
+    socket.on('Boardcardclicked', async (data) => {
+        const { roomId, cardId, selectedCard } = data;
+
+        try {
+            // Fetch the game state from MongoDB
+            let game = await Game.findOne({ roomId: roomId });
+            if (!game) {
+                console.log("Game not found for room: ", roomId);
+                return;
+            }
+
+            // Determine the current player based on the game state
+            let currentTurn = game.players.player1.isTurn ? 'player1' : 'player2';
+            let currentPlayer = game.players[currentTurn];
+            if (socket.id !== currentPlayer.socketId || !currentPlayer.hand.some(card => card.id === selectedCard)) {
+                console.log("Not this player's turn or invalid card manipulation");
+                return;
+            }
+            let cards = game.cards;
+            // Handle card selection and update the game state
+            let  updatedGame = gameController.handleCardSelection(game, cardId, game.shuffledDeck,cards, currentTurn, selectedCard);
+            if (!updatedGame.success) {
+                console.log('Error: ', message);
+                return;
+            }
+            await game.save();
+            // Check for a winner
+            let patternResult = await gameController.Pattern(updatedGame, game.cards);
+            if (patternResult.winner) {
+                io.emit('gameOver', { winner: gameResult.winner });
+            } else {
+                if (patternResult.updated) {
+                    await game.save();
+                }
+
+                Object.keys(game.players).forEach(playerKey => {
+                    const player = game.players[playerKey];
+                    io.to(player.socketId).emit('updateGameState', {
+                        deckCount: game.shuffledDeck.length,
+                        score: game.scores,
+                        cards: game.cards,
+                        prevTurn: currentTurn,
+                        currentTurn: game.players.player1.isTurn ? 'player1' : 'player2',
+                        playerHand: player.hand,
+                    });
+                });
+            }
+        } catch (err) {
+            console.error('Error processing Boardcardclicked:', err);
         }
     });
 
-    socket.on("disconnect", function () {
-        const currentUser = allUsers[socket.id];
-        currentUser.online = false;
-        currentUser.playing = false;
-    })
+    socket.on('room_closed', roomId => {
+        // Handle room closure, if necessary
+    });
 });
 
 httpServer.listen(3000);
