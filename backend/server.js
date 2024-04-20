@@ -8,38 +8,48 @@ const RoomController = require('./controllers/roomController');
 const app = express();
 const httpServer = createServer(app);
 const Game = require('./models/Game');
-let filteredCards = allCards.filter(card => card.id <= 100);
-let cards = JSON.parse(JSON.stringify(filteredCards));
+const Session = require('./models/session');
+// let filteredCards = allCards.filter(card => card.id <= 100);
+// let cards = JSON.parse(JSON.stringify(filteredCards));
 
-
-require('dotenv').config(); 
-const io = new Server(httpServer, {
-    cors: {
-        origin: '*',
-        methods: ["GET","POST","OPTIONS"]
-    }
-});
-const gamesByRoomId = {};
-
-// MongoDB connection
+require('dotenv').config();
 const PORT = process.env.PORT || 7000;
 const MONGO_URL = process.env.MONGO_URL;
 
 mongoose.connect(MONGO_URL)
-  .then(() => {
-    console.log('MongoDB connected');
-    httpServer.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-      new RoomController(io);
-    });
-  })
+  .then(() => console.log('MongoDB connected'))
   .catch(err => console.error('MongoDB connection error:', err));
 
+const io = new Server(httpServer, {
+    cors: { origin: '*', methods: ["GET", "POST", "OPTIONS"] }
+});
+
+const activeSockets = new Map();
 
 function deepClone() {
     let filteredCards = allCards.filter(card => card.id <= 100);
     return JSON.parse(JSON.stringify(filteredCards));
 }
+
+async function createSession(socketId,roomId= '') {
+    const expirationTime = new Date(new Date().getTime() + (2 * 60 * 60 * 1000)); // 2 hours from now
+    const newSession = new Session({
+        sessionId: socketId,  
+        userId: socketId,    
+        roomId: roomId,    
+        expiresAt: expirationTime
+    });
+
+    try {
+        await newSession.save();
+        console.log(`New session created for socket ${socketId} with expiration at ${expirationTime}`);
+        return socketId;
+    } catch (err) {
+        console.error('Failed to save session:', err);
+        return null;
+    }
+}
+
 
 // Method to initialize a game in a room
 async function initializeGameForRoom(roomId, playerName, playerId) {
@@ -109,8 +119,24 @@ async function startGameForRoom(roomId, playerName, playerId) {
 const roomController = new RoomController(io, initializeGameForRoom, startGameForRoom);
 
 io.on("connection", (socket) => {
-    console.log(`New connection: ${socket.id}`);
-
+    let sessionID = socket.handshake.query.sessionId;
+    console.log(sessionID);
+    if (sessionID) {
+        // Reconnect the client to the existing socket instance
+        const existingSocket = activeSockets.get(sessionID);
+        if (existingSocket) {
+        // Disconnect the existing socket instance
+        existingSocket.disconnect();
+        activeSockets.delete(sessionID);
+        }
+        // Store the new socket instance in the activeSockets map
+        activeSockets.set(sessionID, socket);
+        console.log(`Reconnected client ${sessionID}`);
+    } else {
+        console.log(`New connection: ${socket.id}`);
+        const newSessionID = createSession(socket.id); // Create a new session
+        activeSockets.set(newSessionID, socket);
+    }
     socket.on('Boardcardclicked', async (data) => {
         const { roomId, cardId, selectedCard } = data;
 
@@ -130,7 +156,7 @@ io.on("connection", (socket) => {
                 return;
             }
             let cards = game.cards;
-            
+
             // Handle card selection and update the game state
             let  updatedGame = gameController.handleCardSelection(game, cardId, game.shuffledDeck,cards, currentTurn, selectedCard);
             if (!updatedGame.success) {

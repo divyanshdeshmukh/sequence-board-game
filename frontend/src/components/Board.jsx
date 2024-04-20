@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import Cards from "./Cards";
 import PlayerDeck from "./PlayerDeck";
 import Deck from "./Deck";
@@ -28,17 +28,26 @@ export default function Boards() {
   const [inCustomGame, setInCustomGame] = useState(false);
   const [isWaitingForMatch, setIsWaitingForMatch] = useState(false);
   const [room, setRoom] = useState("");
-
-  
+  const [socketId, setSocketId] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const newSocket = io(SERVER_URL, { autoConnect: true });
-    setSocket(newSocket);
-    return () => {
-      newSocket.close();
-    };
+    const storedSocketId = localStorage.getItem("socketId");
+    if (storedSocketId) {
+      setSocketId(storedSocketId);
+    }
   }, []);
+
+  useEffect(() => {
+    if (socketId) {
+      const newSocket = io(SERVER_URL, {
+        autoConnect: true,
+        query: { sessionId: socketId }
+      });
+      setSocket(newSocket);
+    }
+  }, [socketId]);
+
 
   useEffect(() => {
     if (socket) {
