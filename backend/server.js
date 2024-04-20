@@ -9,8 +9,7 @@ const app = express();
 const httpServer = createServer(app);
 const Game = require('./models/Game');
 const Session = require('./models/session');
-// let filteredCards = allCards.filter(card => card.id <= 100);
-// let cards = JSON.parse(JSON.stringify(filteredCards));
+
 
 require('dotenv').config();
 const PORT = process.env.PORT || 7000;
@@ -31,12 +30,21 @@ function deepClone() {
     return JSON.parse(JSON.stringify(filteredCards));
 }
 
-async function createSession(socketId,roomId= '') {
+async function joinRoom(socketId, roomId) {
+    const session = await Session.findOne({ sessionId: socketId });
+    if (session) {
+      session.roomId = roomId;
+      await session.save();
+    }
+  }
+
+
+async function createSession(socketId,roomId = null, playingAs) {
     const expirationTime = new Date(new Date().getTime() + (2 * 60 * 60 * 1000)); // 2 hours from now
-    const newSession = new Session({
-        sessionId: socketId,  
+    const newSession = new Session({  
         userId: socketId,    
         roomId: roomId,    
+        playingAs: playingAs,
         expiresAt: expirationTime
     });
 
@@ -54,6 +62,8 @@ async function createSession(socketId,roomId= '') {
 // Method to initialize a game in a room
 async function initializeGameForRoom(roomId, playerName, playerId) {
     // Check if a game already exists for the roomId
+    const newSessionId = await createSession(playerId, roomId, playingAs='player1');
+    await joinRoom(playerId, roomId);
     let existingGame = await Game.findOne({ roomId: roomId });
   
     if (!existingGame) {
@@ -83,6 +93,8 @@ async function initializeGameForRoom(roomId, playerName, playerId) {
 
   // Method to start a game in a room
 async function startGameForRoom(roomId, playerName, playerId) {
+    const newSessionId = await createSession(playerId, roomId, playingAs='player2');
+    await joinRoom(playerId, roomId);
     try {
         let game = await Game.findOne({ roomId: roomId });
         if (game && !game.players.player2.socketId) {
@@ -118,23 +130,49 @@ async function startGameForRoom(roomId, playerName, playerId) {
 }
 const roomController = new RoomController(io, initializeGameForRoom, startGameForRoom);
 
-io.on("connection", (socket) => {
+io.on("connection", async(socket) => {
     let sessionID = socket.handshake.query.sessionId;
     console.log(sessionID);
     if (sessionID) {
-        // Reconnect the client to the existing socket instance
         const existingSocket = activeSockets.get(sessionID);
         if (existingSocket) {
-        // Disconnect the existing socket instance
         existingSocket.disconnect();
         activeSockets.delete(sessionID);
         }
-        // Store the new socket instance in the activeSockets map
         activeSockets.set(sessionID, socket);
         console.log(`Reconnected client ${sessionID}`);
+
+        // Check if the user has an existing session and room ID
+        const existingSession = await Session.findOne({ sessionId: sessionID });
+        if (existingSession) {
+        const roomId = existingSession.roomId;
+        const playerId = existingSession.userId;
+        const playingAs = existingSession.playingAs;
+        
+        // Fetch game data and emit it to the client
+        let game = await Game.findOne({ roomId: roomId });
+        if (playingAs === "player1") {
+            this.io.to(playerId).emit('OpponentFound', {
+              opponentName: game.players.player2.name,
+              yourHand: game.players.player1.hand,
+              playingAs: "player1",
+              deckCount: game.shuffledDeck.length,
+              cards: game.cards,
+            });
+          } else {
+            this.io.to(playerId).emit('OpponentFound', {
+              opponentName: game.players.player1.name,
+              yourHand: game.players.player2.hand,
+              playingAs: "player2",
+              deckCount: game.shuffledDeck.length,
+              cards: game.cards,
+            });
+          }
+
+        }
     } else {
         console.log(`New connection: ${socket.id}`);
-        const newSessionID = createSession(socket.id); // Create a new session
+        const newSessionID = createSession(socket.id);
         activeSockets.set(newSessionID, socket);
     }
     socket.on('Boardcardclicked', async (data) => {
