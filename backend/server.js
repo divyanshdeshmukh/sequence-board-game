@@ -130,15 +130,25 @@ io.on("connection", (socket) => {
                 return;
             }
             let cards = game.cards;
+            
             // Handle card selection and update the game state
             let  updatedGame = gameController.handleCardSelection(game, cardId, game.shuffledDeck,cards, currentTurn, selectedCard);
             if (!updatedGame.success) {
                 console.log('Error: ', message);
                 return;
             }
-            await game.save();
-            // Check for a winner
-            let patternResult = await gameController.Pattern(updatedGame, game.cards);
+
+            let updateData = {
+                'players.player1': updatedGame.game.players.player1,
+                'players.player2': updatedGame.game.players.player2,
+                'scores': updatedGame.game.scores,
+                'shuffledDeck': updatedGame.game.shuffledDeck,
+                'cards': updatedGame.game.cards,
+                'protectedPatterns': updatedGame.game.protectedPatterns
+            };
+    
+            await Game.updateOne({ roomId: roomId }, { $set: updateData });
+            let patternResult = gameController.Pattern(updatedGame.game, game.cards);
             if (patternResult.winner) {
                 io.emit('gameOver', { winner: gameResult.winner });
             } else {
