@@ -1,77 +1,9 @@
-const express = require('express');
-const mongoose = require("mongoose");
-const { createServer } = require('http');
-const { Server } = require('socket.io');
-const dotenv = require('dotenv');
-const allCards = require('./data/allCards.js');
-const gameController = require('./controllers/gameController');
-const RoomController = require('./controllers/roomController');
-const Game = require('./models/Game');
-const Session = require('./models/session');
-const config = require('./config/config');
-//const setupSocketHandlers = require('./socketHandlers');
-//const { initializeGameForRoom, startGameForRoom } = require('./controllers/startController');
+const Game = require('../models/Game');
+const { createSession, joinRoom } = require('../sessionManager');
+const gameLogic = require('../gameLogic');
+const gameController = require('./gameController');
 
-dotenv.config();
-
-const app = express();
-const httpServer = createServer(app);
-const io = new Server(httpServer, {
-    cors: config.corsOptions
-});
-
-mongoose.connect(config.MONGO_URL)
-  .then(() => console.log('MongoDB connected'))
-  .catch(err => console.error('MongoDB connection error:', err));
-
-  // Initialize the Room Controller here after setting up all dependencies
-// const roomController = new RoomController(io, initializeGameForRoom, startGameForRoom);
-
-// setupSocketHandlers(io);
-
-// httpServer.listen(3000, () => {
-//     console.log(`Server running on port 3000`);
-// });
-
-const activeSockets = new Map();
-
-function deepClone() {
-    let filteredCards = allCards.filter(card => card.id <= 100);
-    return JSON.parse(JSON.stringify(filteredCards));
-}
-
-async function joinRoom(socketId, roomId) {
-    const session = await Session.findOne({ sessionId: socketId });
-    if (session) {
-      session.roomId = roomId;
-      await session.save();
-    }
-  }
-
-
-async function createSession(socketId,roomId = null, playingAs) {
-    const expirationTime = new Date(new Date().getTime() + (2 * 60 * 60 * 1000)); // 2 hours from now
-    const newSession = new Session({  
-        userId: socketId,    
-        roomId: roomId,    
-        playingAs: playingAs,
-        expiresAt: expirationTime
-    });
-
-    try {
-        await newSession.save();
-        console.log(`New session created for socket ${socketId} with expiration at ${expirationTime}`);
-        return socketId;
-    } catch (err) {
-        console.error('Failed to save session:', err);
-        return null;
-    }
-}
-
-
-// Method to initialize a game in a room
-async function initializeGameForRoom(roomId, playerName, playerId) {
-    // Check if a game already exists for the roomId
+exports.initializeGameForRoom = async function(roomId, playerName, playerId){
     const newSessionId = await createSession(playerId, roomId, playingAs='player1');
     await joinRoom(playerId, roomId);
     let existingGame = await Game.findOne({ roomId: roomId });
@@ -99,10 +31,9 @@ async function initializeGameForRoom(roomId, playerName, playerId) {
     } else {
       //console.log(`Game already exists for room ${roomId}, proceeding with existing game.`);
     }
-  }
+}
 
-  // Method to start a game in a room
-async function startGameForRoom(roomId, playerName, playerId) {
+exports.startGameForRoom = async function(roomId, playerName, playerId) {
     const newSessionId = await createSession(playerId, roomId, playingAs='player2');
     await joinRoom(playerId, roomId);
     try {
@@ -137,56 +68,10 @@ async function startGameForRoom(roomId, playerName, playerId) {
     } catch (err) {
         console.error(`Error updating game for room ${roomId}:`, err);
     }
-}
-const roomController = new RoomController(io, initializeGameForRoom, startGameForRoom);
+};
 
-io.on("connection", async(socket) => {
-    let sessionID = socket.handshake.query.sessionId;
-    console.log(sessionID);
-    if (sessionID) {
-        const existingSocket = activeSockets.get(sessionID);
-        if (existingSocket) {
-        existingSocket.disconnect();
-        activeSockets.delete(sessionID);
-        }
-        activeSockets.set(sessionID, socket);
-        console.log(`Reconnected client ${sessionID}`);
-
-        // Check if the user has an existing session and room ID
-        const existingSession = await Session.findOne({ sessionId: sessionID });
-        if (existingSession) {
-        const roomId = existingSession.roomId;
-        const playerId = existingSession.userId;
-        const playingAs = existingSession.playingAs;
-        
-        // Fetch game data and emit it to the client
-        let game = await Game.findOne({ roomId: roomId });
-        if (playingAs === "player1") {
-            this.io.to(playerId).emit('OpponentFound', {
-              opponentName: game.players.player2.name,
-              yourHand: game.players.player1.hand,
-              playingAs: "player1",
-              deckCount: game.shuffledDeck.length,
-              cards: game.cards,
-            });
-          } else {
-            this.io.to(playerId).emit('OpponentFound', {
-              opponentName: game.players.player1.name,
-              yourHand: game.players.player2.hand,
-              playingAs: "player2",
-              deckCount: game.shuffledDeck.length,
-              cards: game.cards,
-            });
-          }
-
-        }
-    } else {
-        console.log(`New connection: ${socket.id}`);
-        const newSessionID = createSession(socket.id);
-        activeSockets.set(newSessionID, socket);
-    }
-    socket.on('Boardcardclicked', async (data) => {
-        const { roomId, cardId, selectedCard } = data;
+exports.handleCardClick = async function(data, socket, io) {
+    const { roomId, cardId, selectedCard } = data;
 
         try {
             // Fetch the game state from MongoDB
@@ -245,11 +130,8 @@ io.on("connection", async(socket) => {
         } catch (err) {
             console.error('Error processing Boardcardclicked:', err);
         }
-    });
+    };
 
-    socket.on('room_closed', roomId => {
-        // Handle room closure, if necessary
-    });
-});
-
-httpServer.listen(3000);
+    exports.handleRoomClosure = async function(roomId) {
+        // Handle 'room_closed' event
+    };

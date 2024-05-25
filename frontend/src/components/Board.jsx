@@ -31,23 +31,35 @@ export default function Boards() {
   const [socketId, setSocketId] = useState(null);
   const navigate = useNavigate();
 
+  // useEffect(() => {
+  //   const storedSocketId = localStorage.getItem("socketId");
+  //   if (storedSocketId) {
+  //     setSocketId(storedSocketId);
+  //   }
+  // }, []);
+
+  // useEffect(() => {
+  //   if (socketId) {
+  //     console.log(socketId);
+  //     const newSocket = io(SERVER_URL, {
+  //       autoConnect: true,
+  //       query: { sessionId: socketId }
+  //     });
+  //     setSocket(newSocket);
+  //   }
+  // }, [socketId]);
+
+  // at the start we are setting a connection.
   useEffect(() => {
-    const storedSocketId = localStorage.getItem("socketId");
-    if (storedSocketId) {
-      setSocketId(storedSocketId);
+    if (!socket) {
+      const newSocket = io(SERVER_URL, { autoConnect: true });
+      setSocket(newSocket);
+      console.log(socket);
+      return () => {
+        newSocket.close();
+      };
     }
   }, []);
-
-  useEffect(() => {
-    if (socketId) {
-      const newSocket = io(SERVER_URL, {
-        autoConnect: true,
-        query: { sessionId: socketId }
-      });
-      setSocket(newSocket);
-    }
-  }, [socketId]);
-
 
   useEffect(() => {
     if (socket) {
@@ -79,10 +91,12 @@ export default function Boards() {
     }
     const username = result.value;
     setPlayerName(username);
-    if (!socket) {
-      const newSocket = io("http://localhost:3000", { autoConnect: true });
-      setSocket(newSocket);
-    }
+    
+    // if (!socket) {
+    //   const newSocket = io("http://localhost:3000", { autoConnect: true });
+    //   setSocket(newSocket);
+    // }
+
     //socket.emit("start_game", { playerName: username });
     socket.emit("create_custom_room", { playerName: username }, (response) => {
       if (response.roomId) {
@@ -142,11 +156,12 @@ export default function Boards() {
     }
     const username = result.value;
     setPlayerName(username);
-    if (!socket) {
-      const newSocket = io("http://localhost:3000", { autoConnect: true });
-      setSocket(newSocket);
-      registerSocketEvents();
-    }
+
+    // if (!socket) {
+    //   const newSocket =  io(SERVER_URL, { autoConnect: true });
+    //   setSocket(newSocket);
+    //   console.log(newSocket);
+    // }
     //socket.emit("start_game", { playerName: username });
     socket.emit("play_online", { playerName: username }, (response) => {
       setPlayOnline(true);
@@ -177,45 +192,51 @@ export default function Boards() {
 
   const registerSocketEvents = useCallback(() => {
     socket.on("connect", () => {});
-    socket.on("OpponentNotFound", () => {
-      setOpponentName(false);
-    });
-    socket.on("OpponentFound", (data) => {
-      setIsWaitingForMatch(false);
-      setPlayingAs(data.playingAs);
-      setOpponentName(data.opponentName);
-      setYourHand(data.yourHand);
-      setDeckCount(data.deckCount);
-      setCards(data.cards);
-    });
-    socket.on("gameOver", (data) => {
-      Swal.fire({
-        title: `${data.winner} Won the game`,
-        icon: "success",
+      //   // console.log('Connected');
+      //   // console.log(socket.id);
+      //   // const newSocketId = socket.id;
+      //   // const storedSocketId = localStorage.setItem("socketId", newSocketId); ;
+      //   // setSocketId(storedSocketId);
+      //  });
+      socket.on("OpponentNotFound", () => {
+        setOpponentName(false);
       });
-    });
-    socket.on("custom_room_created", (data) => {
-      setInCustomGame(true);
-      setCustomRoomId(data.roomId);
-      Swal.fire(`Room created successfully. Room ID: ${data.roomId}`);
-    });
-    socket.on("custom_room_joined", () => {
-      setInCustomGame(true);
-      Swal.fire("Joined room successfully.");
-    });
-    socket.on("room_join_error", (error) => {
-      Swal.fire("Error", error.message, "error");
-    });
-
-    return () => {
-      socket.off("connect");
-      socket.off("OpponentNotFound");
-      socket.off("OpponentFound");
-      socket.off("gameOver");
-      socket.off("custom_room_created");
-      socket.off("custom_room_joined");
-      socket.off("room_join_error");
-    };
+      socket.on("OpponentFound", (data) => {
+        setIsWaitingForMatch(false);
+        setPlayingAs(data.playingAs);
+        setOpponentName(data.opponentName);
+        setYourHand(data.yourHand);
+        setDeckCount(data.deckCount);
+        setCards(data.cards);
+      });
+      socket.on("gameOver", (data) => {
+        Swal.fire({
+          title: `${data.winner} Won the game`,
+          icon: "success",
+        });
+      });
+      socket.on("custom_room_created", (data) => {
+        setInCustomGame(true);
+        setCustomRoomId(data.roomId);
+        Swal.fire(`Room created successfully. Room ID: ${data.roomId}`);
+      });
+      socket.on("custom_room_joined", () => {
+        setInCustomGame(true);
+        Swal.fire("Joined room successfully.");
+      });
+      socket.on("room_join_error", (error) => {
+        Swal.fire("Error", error.message, "error");
+      });
+  
+      return () => {
+        socket.off("connect");
+        socket.off("OpponentNotFound");
+        socket.off("OpponentFound");
+        socket.off("gameOver");
+        socket.off("custom_room_created");
+        socket.off("custom_room_joined");
+        socket.off("room_join_error");
+      };
   }, [socket]);
 
   const checkForRoomCode = useCallback(() => {
