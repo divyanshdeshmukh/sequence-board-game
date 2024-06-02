@@ -74,14 +74,14 @@ Without Docker
 
 ```sh
 cd backend
-npm run dev
+npm run
 ```
 
 - Start the frontend
 
 ```sh
 cd ../frontend
-npm start
+npm run dev
 ```
 
 ## Access the application
