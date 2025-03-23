@@ -17,8 +17,33 @@ const PlayerDeck = ({ socket, playerHand, setSelectCard, setHoveredCard, playing
     setHoveredCard([]);
   };
 
+  const handleSwapCards = () => {
+    if (playingAs === currentPlayer) {
+      console.log('Attempting to swap cards...');
+      console.log('Socket exists:', !!socket);
+      socket?.emit('swapCards');
+    } else {
+      alert('You can only swap cards during your turn!');
+    }
+  };
+
+  // Add useEffect to verify socket connection
+  useEffect(() => {
+    if (socket) {
+      socket.on('updateGameState', (gameState) => {
+        console.log('Received updated game state after swap:', gameState);
+      });
+    }
+  }, [socket]);
+
   return (
     <div className="player-deck-container absolute bottom-0 right-0 mb-4 mr-4">
+      <button 
+        onClick={handleSwapCards}
+        className="swap-button mb-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+      >
+        Swap Random Cards
+      </button>
       <div className="player-deck-header">
         Player Deck
       </div>

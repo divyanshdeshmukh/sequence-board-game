@@ -250,6 +250,83 @@ io.on("connection", async(socket) => {
     socket.on('room_closed', roomId => {
         // Handle room closure, if necessary
     });
+
+    socket.on('swapCards', async () => {
+        try {
+            console.log('Received swapCards event from socket:', socket.id);
+            
+            // Find the game this socket is participating in
+            const game = await Game.findOne({
+                $or: [
+                    { 'players.player1.socketId': socket.id },
+                    { 'players.player2.socketId': socket.id }
+                ]
+            });
+
+            if (!game) {
+                console.log('No game found for socket:', socket.id);
+                return;
+            }
+
+            // Determine which player initiated the swap
+            const isPlayer1 = game.players.player1.socketId === socket.id;
+            const currentPlayer = isPlayer1 ? 'player1' : 'player2';
+            const nextPlayer = isPlayer1 ? 'player2' : 'player1';
+            
+            console.log('Current player:', currentPlayer);
+            console.log('Is player turn:', isPlayer1 ? game.players.player1.isTurn : game.players.player2.isTurn);
+
+            // Only allow swapping during the player's turn
+            if ((isPlayer1 && !game.players.player1.isTurn) || (!isPlayer1 && !game.players.player2.isTurn)) {
+                console.log('Not player\'s turn');
+                return;
+            }
+
+            // Get random indices for both players' hands
+            const player1RandomIndex = Math.floor(Math.random() * game.players.player1.hand.length);
+            const player2RandomIndex = Math.floor(Math.random() * game.players.player2.hand.length);
+
+            console.log('Swapping cards at indices:', player1RandomIndex, player2RandomIndex);
+
+            // Swap the cards
+            const tempCard = game.players.player1.hand[player1RandomIndex];
+            game.players.player1.hand[player1RandomIndex] = game.players.player2.hand[player2RandomIndex];
+            game.players.player2.hand[player2RandomIndex] = tempCard;
+
+            // Switch turns
+            game.players.player1.isTurn = !game.players.player1.isTurn;
+            game.players.player2.isTurn = !game.players.player2.isTurn;
+
+            // Save the updated game state
+            await game.save();
+            console.log('Game state saved after swap');
+
+            // Emit the updated hands to both players
+            io.to(game.players.player1.socketId).emit('updateGameState', {
+                playerHand: game.players.player1.hand,
+                deckCount: game.shuffledDeck.length,
+                cards: game.cards,
+                currentTurn: nextPlayer,
+                score: game.scores,
+                prevTurn: currentPlayer
+            });
+
+            io.to(game.players.player2.socketId).emit('updateGameState', {
+                playerHand: game.players.player2.hand,
+                deckCount: game.shuffledDeck.length,
+                cards: game.cards,
+                currentTurn: nextPlayer,
+                score: game.scores,
+                prevTurn: currentPlayer
+            });
+
+            console.log('Update events emitted to both players');
+
+        } catch (error) {
+            console.error('Error in swapCards:', error);
+            socket.emit('error', { message: 'Failed to swap cards' });
+        }
+    });
 });
 
 httpServer.listen(3000);

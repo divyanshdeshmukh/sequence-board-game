@@ -1,8 +1,4 @@
-# sequence-board-game
-
 # Web-Based Sequence Game Platform
-
-![Game Screenshot](https://github.com/AnishmMore/sequence-board-game/blob/main/sequence_board.jpeg)
 
 ## Overview
 
@@ -37,54 +33,45 @@ This project is a web-based platform for playing the Sequence board game online.
 
 1. **Clone the repository**
    ```sh
-   git clone https://github.com/AnishmMore/sequence-board-game.git
+   git clone https://github.com/divyanshdeshmukh/sequence-board-game.git
    cd sequence-board-game
+   ```
 
 2. **Install dependencies**
+   ```sh
+   # For the frontend:
+   cd frontend
+   npm install
+   ```
 
-   Sure, here's the fixed markup for better readability:
+### Running the Application
 
-```sh
-# For the frontend:
-
-cd ../frontend
-npm install
-
-# Running the Application Using Docker
+#### Using Docker
 
 Ensure Docker is running on your machine.
-
-## Build and run the containers
 
 ```sh
 docker-compose up --build
 ```
 
-## Access the application
+#### Without Docker
 
-- Frontend: http://localhost:3000
-- Backend: http://localhost:5000
+1. Start MongoDB
+   Ensure you have MongoDB running locally or use a MongoDB cloud service.
 
-Without Docker
+2. Start the backend
+   ```sh
+   cd backend
+   npm run
+   ```
 
-- Start MongoDB
-  Ensure you have MongoDB running locally or use a MongoDB cloud service.
+3. Start the frontend
+   ```sh
+   cd ../frontend
+   npm run dev
+   ```
 
-- Start the backend
-
-```sh
-cd backend
-npm run
-```
-
-- Start the frontend
-
-```sh
-cd ../frontend
-npm run dev
-```
-
-## Access the application
+## Access the Application
 
 - Frontend: http://localhost:3000
 - Backend: http://localhost:5000
@@ -108,11 +95,12 @@ npm test
 
 ## License
 
-This project is licensed under the MIT License. See the `LICENSE` file for details.
+This project is licensed under the Unlicense - see the `LICENSE` file for details.
 
 ## Contact
 
-Anish More - amore159@ucr.edu
+Divyansh Deshmukh  
+MS in Computer Science @ University of California, Riverside
 
-Project Link: [https://github.com/AnishmMore/sequence-board-game](https://github.com/AnishmMore/sequence-board-game)
+Project Link: [https://github.com/divyanshdeshmukh/sequence-board-game](https://github.com/divyanshdeshmukh/sequence-board-game)
 ```
